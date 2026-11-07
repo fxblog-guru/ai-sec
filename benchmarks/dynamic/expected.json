@@ -1,0 +1,113 @@
+{
+  "comment": "Known answers for the dynamic benchmark in app.mjs. We wrote the target, so a perfect score here is `self-measured` and never `measured` — the NodeGoat benchmark is the one that can surprise us. What this benchmark is for is different: it is the only place where a finding is produced by sending a request and reading the answer, so the modules it covers stop being graded on a pattern match. /api/profile/:id is deliberately correct and appears in `must_not_report`.",
+  "authored_by": "ai-sec",
+  "target": "benchmarks/dynamic/app.mjs",
+  "tier": "T2",
+  "defects": [
+    {
+      "id": "no-content-security-policy",
+      "rule_id_prefix": "missing-csp",
+      "modules": ["M3", "M9"],
+      "min_severity": "Medium",
+      "finding_class": "hardening",
+      "cause": "no Content-Security-Policy header is sent, so any injected markup executes",
+      "not_the_cause": ["an injection; this is the second layer, missing"]
+    },
+    {
+      "id": "no-x-content-type-options",
+      "rule_id_prefix": "missing-x-content-type-options",
+      "modules": ["M3", "M9"],
+      "min_severity": "Low",
+      "finding_class": "hardening",
+      "cause": "responses can be sniffed as a type they were not served as",
+      "not_the_cause": ["a wrong Content-Type; the header is simply absent"]
+    },
+    {
+      "id": "no-frame-protection",
+      "rule_id_prefix": "missing-frame-protection",
+      "modules": ["M3", "M9"],
+      "min_severity": "Medium",
+      "finding_class": "hardening",
+      "cause": "neither X-Frame-Options nor frame-ancestors is set, so the page can be framed",
+      "not_the_cause": ["the missing CSP as a whole; frame-ancestors is its own directive"]
+    },
+    {
+      "id": "no-referrer-policy",
+      "rule_id_prefix": "missing-referrer-policy",
+      "modules": ["M3"],
+      "min_severity": "Low",
+      "finding_class": "hardening",
+      "cause": "full URLs leak to third parties in the Referer header",
+      "not_the_cause": ["HTTPS; the header travels either way"]
+    },
+    {
+      "id": "wildcard-cors-with-credentials",
+      "rule_id_prefix": "permissive-cors-credentials",
+      "modules": ["M3", "M7", "M9"],
+      "min_severity": "High",
+      "cause": "Access-Control-Allow-Origin is * and Access-Control-Allow-Credentials is true, so any site reads authenticated responses",
+      "not_the_cause": [
+        "the wildcard on its own, which is harmless without credentials",
+        "a missing CSRF token"
+      ]
+    },
+    {
+      "id": "framework-banner",
+      "rule_id_prefix": "technology-banner",
+      "modules": ["M3"],
+      "min_severity": "Info",
+      "cause": "X-Powered-By names the framework and its version on every response",
+      "not_the_cause": ["the framework being out of date; this is the disclosure"]
+    },
+    {
+      "id": "session-cookie-without-flags",
+      "file": "/login",
+      "rule_id_prefix": "insecure-cookie",
+      "modules": ["M3", "M4"],
+      "min_severity": "Medium",
+      "cause": "the session cookie is set with no Secure, no HttpOnly and no SameSite",
+      "not_the_cause": ["the cookie value being guessable, which is a separate defect this benchmark does not record"]
+    },
+    {
+      "id": "open-redirect",
+      "file": "/go",
+      "rule_id_prefix": "open-redirect",
+      "modules": ["M1", "M9"],
+      "min_severity": "Medium",
+      "cause": "the Location header is taken from the next parameter with no allowlist",
+      "not_the_cause": ["an SSRF; the browser makes the request, not the server"]
+    },
+    {
+      "id": "stack-trace-in-response",
+      "file": "/boom",
+      "rule_id_prefix": "verbose-error",
+      "modules": ["M13"],
+      "min_severity": "Low",
+      "cause": "a 500 response carries the stack trace, with absolute paths and module versions",
+      "not_the_cause": ["the underlying TypeError, which is a bug and not the security defect"]
+    },
+    {
+      "id": "order-readable-across-accounts",
+      "file": "/api/orders/1",
+      "rule_id_prefix": "cross-account-object-read",
+      "modules": ["M5", "M8"],
+      "min_severity": "High",
+      "cause": "the handler checks that there is a session, never that the session owns the order",
+      "not_the_cause": [
+        "missing authentication; the endpoint returns 401 without a cookie, and the control request proves it",
+        "an enumerable identifier, which only decides how fast the data is read, not whether it can be"
+      ]
+    }
+  ],
+  "must_not_report": [
+    {
+      "path": "/api/profile/:id",
+      "why": "the same shape as the orders handler, one line longer: it compares the session to the object's owner and answers 403. A cross-account check that reports this is matching the shape of the code, not the behaviour of the server."
+    },
+    {
+      "path": "/api/inbox",
+      "why": "correct in the harder way: it answers 200 to every account, and returns that account's own messages. A check that reads the status code and stops reports it. Comparing the bodies is what tells the two endpoints apart."
+    }
+  ],
+  "accepted": []
+}

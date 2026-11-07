@@ -1,0 +1,154 @@
+[
+  {
+    "fingerprint": "edb4fc6efc84d030876896a1064f5298c57f36c2d3ae72ea0a3c7e9612eae5ee",
+    "rule_id": "hardcoded-credential",
+    "location": {
+      "file": "config/settings.js",
+      "symbol": "default",
+      "line": 14
+    },
+    "insertion_point": null,
+    "severity": "Critical",
+    "confidence": "Tentative",
+    "status": "open",
+    "impact": "HIGH",
+    "likelihood": "HIGH",
+    "cvss": null,
+    "detection_method": "pattern",
+    "detail": "An AWS access key id is assigned in source.",
+    "evidence": "const AWS_KEY = \"<redacted:aws-access-key:20:AKIA>\"",
+    "modules": [
+      "M3"
+    ],
+    "sources": [
+      {
+        "tool": "fake",
+        "rule": "hardcoded-credential",
+        "reported_severity": "CRITICAL",
+        "detection_method": "pattern",
+        "location": {
+          "file": "config/settings.js",
+          "symbol": "default",
+          "line": 14
+        }
+      }
+    ],
+    "baseline_state": "new"
+  },
+  {
+    "fingerprint": "f91383e13b6313e7a30710cef690326b723e0cdaf89ba4e736a8b3cd75ccf08f",
+    "rule_id": "sql-injection",
+    "location": {
+      "file": "src/db/orders.js",
+      "symbol": "getOrder",
+      "line": 142
+    },
+    "insertion_point": {
+      "kind": "body-parameter",
+      "name": "orderId"
+    },
+    "severity": "High",
+    "confidence": "Firm",
+    "status": "open",
+    "impact": "HIGH",
+    "likelihood": "MEDIUM",
+    "cvss": null,
+    "detection_method": "dataflow",
+    "detail": "req.body.orderId flows into db.raw() with no sanitizer on the path.",
+    "evidence": "db.raw(`SELECT * FROM orders WHERE id = ${orderId}`)",
+    "modules": [
+      "M1",
+      "M6"
+    ],
+    "sources": [
+      {
+        "tool": "fake",
+        "rule": "sql-injection",
+        "reported_severity": "ERROR",
+        "detection_method": "dataflow",
+        "location": {
+          "file": "src/db/orders.js",
+          "symbol": "getOrder",
+          "line": 142
+        }
+      }
+    ],
+    "baseline_state": "new"
+  },
+  {
+    "fingerprint": "7587291b88f91f7e4f0a32a316399b5e074d8f91b562add0dfe8ca8ce091594c",
+    "rule_id": "missing-authorization",
+    "location": {
+      "file": "src/routes/admin.js",
+      "symbol": "deleteUser",
+      "line": 61
+    },
+    "insertion_point": {
+      "kind": "url-path",
+      "name": "userId"
+    },
+    "severity": "High",
+    "confidence": "Tentative",
+    "status": "open",
+    "impact": "HIGH",
+    "likelihood": "MEDIUM",
+    "cvss": null,
+    "detection_method": "pattern",
+    "detail": "DELETE /admin/users/:userId is registered before the requireAdmin middleware.",
+    "evidence": "router.delete('/admin/users/:userId', deleteUser)",
+    "modules": [
+      "M5"
+    ],
+    "sources": [
+      {
+        "tool": "fake",
+        "rule": "missing-authorization",
+        "reported_severity": "WARNING",
+        "detection_method": "pattern",
+        "location": {
+          "file": "src/routes/admin.js",
+          "symbol": "deleteUser",
+          "line": 61
+        }
+      }
+    ],
+    "baseline_state": "new"
+  },
+  {
+    "fingerprint": "71fb1a6aaf355e8c336845e2b679da7c8d3cc3a0dbe6e9ad32c1462425b35edb",
+    "rule_id": "weak-randomness",
+    "location": {
+      "file": "src/auth/token.js",
+      "symbol": "makeResetToken",
+      "line": 23
+    },
+    "insertion_point": null,
+    "severity": "Medium",
+    "confidence": "Tentative",
+    "status": "open",
+    "impact": "MEDIUM",
+    "likelihood": "MEDIUM",
+    "cvss": null,
+    "detection_method": "pattern",
+    "detail": "Password reset tokens are built from Math.random().",
+    "evidence": "return Math.random().toString(36).slice(2)",
+    "modules": [
+      "M4",
+      "M12"
+    ],
+    "sources": [
+      {
+        "tool": "fake",
+        "rule": "weak-randomness",
+        "reported_severity": "WARNING",
+        "detection_method": "pattern",
+        "location": {
+          "file": "src/auth/token.js",
+          "symbol": "makeResetToken",
+          "line": 23
+        }
+      }
+    ],
+    "baseline_state": "new"
+  }
+]

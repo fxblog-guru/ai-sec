@@ -1,0 +1,62 @@
+{
+  "covered": [
+    {
+      "scanner": "fake",
+      "kind": "languages",
+      "detail": "javascript",
+      "count": 1,
+      "scanned": true
+    },
+    {
+      "scanner": "fake",
+      "kind": "files",
+      "detail": "scanned",
+      "count": 24,
+      "scanned": true
+    },
+    {
+      "scanner": "fake",
+      "kind": "rules",
+      "detail": "fake ruleset",
+      "count": 4,
+      "scanned": true
+    }
+  ],
+  "not_evaluable": [
+    {
+      "check": "module M2",
+      "reason": "no scanner in this run contributes to it",
+      "unblock": "add a scanner that covers this module"
+    },
+    {
+      "check": "module M7",
+      "reason": "no scanner in this run contributes to it",
+      "unblock": "add a scanner that covers this module"
+    },
+    {
+      "check": "module M8",
+      "reason": "no scanner in this run contributes to it",
+      "unblock": "add a scanner that covers this module"
+    },
+    {
+      "check": "module M9",
+      "reason": "no scanner in this run contributes to it",
+      "unblock": "add a scanner that covers this module"
+    },
+    {
+      "check": "module M10",
+      "reason": "no scanner in this run contributes to it",
+      "unblock": "add a scanner that covers this module"
+    },
+    {
+      "check": "module M11",
+      "reason": "no scanner in this run contributes to it",
+      "unblock": "add a scanner that covers this module"
+    },
+    {
+      "check": "module M13",
+      "reason": "no scanner in this run contributes to it",
+      "unblock": "add a scanner that covers this module"
+    }
+  ]
+}

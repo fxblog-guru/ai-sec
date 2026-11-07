@@ -1,0 +1,384 @@
+{
+  "schema": "sec-result/v1",
+  "run_id": "20261030-224946-2487",
+  "run_state": "done",
+  "started_at": "2026-10-30T15:49:46.134Z",
+  "finished_at": "2026-10-30T15:49:46.523Z",
+  "target": {
+    "kind": "repo",
+    "path": "C:\\Users\\luann\\agentic-fx\\ai-sec\\examples\\quickstart",
+    "git_sha": null
+  },
+  "scope": {
+    "tier": "T0",
+    "max_tier": "T0",
+    "authorization_basis": "own-repo",
+    "environment": "local"
+  },
+  "standards": {
+    "wstg": "v4.2",
+    "asvs": "5.0.0",
+    "owasp_top10": "2025",
+    "api_top10": "2023",
+    "cvss": "3.1"
+  },
+  "tools": [
+    {
+      "name": "fake",
+      "version": null,
+      "exit_code": 0,
+      "duration_s": 0.328
+    }
+  ],
+  "rules": [
+    {
+      "rule_id": "sql-injection",
+      "name": "SQL injection",
+      "background": "User-controlled input reaches a SQL query without parameterization, letting an attacker change the query.",
+      "remediation": "Bind every user value as a parameter. Allowlist identifiers that cannot be bound.",
+      "classification": {
+        "cwe": [
+          "CWE-89"
+        ],
+        "owasp": [
+          "A05:2025"
+        ],
+        "wstg": [
+          "WSTG-v42-INPV-05"
+        ],
+        "asvs": [
+          "v5.0.0-1.2.5"
+        ],
+        "api": []
+      },
+      "typical_severity": "High",
+      "references": [
+        "https://cwe.mitre.org/data/definitions/89.html"
+      ]
+    },
+    {
+      "rule_id": "hardcoded-credential",
+      "name": "Hardcoded credential",
+      "background": "A credential committed to the repository is available to everyone with read access, and to anyone who ever had it.",
+      "remediation": "Move it to a secrets manager and rotate it. Treat the old value as compromised.",
+      "classification": {
+        "cwe": [
+          "CWE-798"
+        ],
+        "owasp": [
+          "A02:2025"
+        ],
+        "wstg": [
+          "WSTG-v42-CONF-02"
+        ],
+        "asvs": [
+          "v5.0.0-14.1.1"
+        ],
+        "api": []
+      },
+      "typical_severity": "Critical",
+      "references": [
+        "https://cwe.mitre.org/data/definitions/798.html"
+      ]
+    },
+    {
+      "rule_id": "missing-authorization",
+      "name": "Missing authorization check",
+      "background": "A route that changes state is reachable without an authorization check, so any caller can invoke it.",
+      "remediation": "Enforce authorization in shared middleware, default-deny, rather than per route.",
+      "classification": {
+        "cwe": [
+          "CWE-862"
+        ],
+        "owasp": [
+          "A01:2025"
+        ],
+        "wstg": [
+          "WSTG-v42-ATHZ-02"
+        ],
+        "asvs": [
+          "v5.0.0-8.1.1"
+        ],
+        "api": [
+          "API5:2023"
+        ]
+      },
+      "typical_severity": "High",
+      "references": [
+        "https://cwe.mitre.org/data/definitions/862.html"
+      ]
+    },
+    {
+      "rule_id": "weak-randomness",
+      "name": "Insufficiently random value",
+      "background": "Math.random is not cryptographically secure; tokens built from it are predictable.",
+      "remediation": "Use crypto.randomUUID() or crypto.randomBytes() for anything security-relevant.",
+      "classification": {
+        "cwe": [
+          "CWE-330"
+        ],
+        "owasp": [
+          "A04:2025"
+        ],
+        "wstg": [
+          "WSTG-v42-CRYP-04"
+        ],
+        "asvs": [
+          "v5.0.0-11.3.1"
+        ],
+        "api": []
+      },
+      "typical_severity": "Medium",
+      "references": [
+        "https://cwe.mitre.org/data/definitions/330.html"
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "fingerprint": "edb4fc6efc84d030876896a1064f5298c57f36c2d3ae72ea0a3c7e9612eae5ee",
+      "rule_id": "hardcoded-credential",
+      "location": {
+        "file": "config/settings.js",
+        "symbol": "default",
+        "line": 14
+      },
+      "insertion_point": null,
+      "severity": "Critical",
+      "confidence": "Tentative",
+      "status": "open",
+      "impact": "HIGH",
+      "likelihood": "HIGH",
+      "cvss": null,
+      "detection_method": "pattern",
+      "detail": "An AWS access key id is assigned in source.",
+      "evidence": "const AWS_KEY = \"<redacted:aws-access-key:20:AKIA>\"",
+      "modules": [
+        "M3"
+      ],
+      "sources": [
+        {
+          "tool": "fake",
+          "rule": "hardcoded-credential",
+          "reported_severity": "CRITICAL",
+          "detection_method": "pattern",
+          "location": {
+            "file": "config/settings.js",
+            "symbol": "default",
+            "line": 14
+          }
+        }
+      ],
+      "baseline_state": "new"
+    },
+    {
+      "fingerprint": "f91383e13b6313e7a30710cef690326b723e0cdaf89ba4e736a8b3cd75ccf08f",
+      "rule_id": "sql-injection",
+      "location": {
+        "file": "src/db/orders.js",
+        "symbol": "getOrder",
+        "line": 142
+      },
+      "insertion_point": {
+        "kind": "body-parameter",
+        "name": "orderId"
+      },
+      "severity": "High",
+      "confidence": "Firm",
+      "status": "open",
+      "impact": "HIGH",
+      "likelihood": "MEDIUM",
+      "cvss": null,
+      "detection_method": "dataflow",
+      "detail": "req.body.orderId flows into db.raw() with no sanitizer on the path.",
+      "evidence": "db.raw(`SELECT * FROM orders WHERE id = ${orderId}`)",
+      "modules": [
+        "M1",
+        "M6"
+      ],
+      "sources": [
+        {
+          "tool": "fake",
+          "rule": "sql-injection",
+          "reported_severity": "ERROR",
+          "detection_method": "dataflow",
+          "location": {
+            "file": "src/db/orders.js",
+            "symbol": "getOrder",
+            "line": 142
+          }
+        }
+      ],
+      "baseline_state": "new"
+    },
+    {
+      "fingerprint": "7587291b88f91f7e4f0a32a316399b5e074d8f91b562add0dfe8ca8ce091594c",
+      "rule_id": "missing-authorization",
+      "location": {
+        "file": "src/routes/admin.js",
+        "symbol": "deleteUser",
+        "line": 61
+      },
+      "insertion_point": {
+        "kind": "url-path",
+        "name": "userId"
+      },
+      "severity": "High",
+      "confidence": "Tentative",
+      "status": "open",
+      "impact": "HIGH",
+      "likelihood": "MEDIUM",
+      "cvss": null,
+      "detection_method": "pattern",
+      "detail": "DELETE /admin/users/:userId is registered before the requireAdmin middleware.",
+      "evidence": "router.delete('/admin/users/:userId', deleteUser)",
+      "modules": [
+        "M5"
+      ],
+      "sources": [
+        {
+          "tool": "fake",
+          "rule": "missing-authorization",
+          "reported_severity": "WARNING",
+          "detection_method": "pattern",
+          "location": {
+            "file": "src/routes/admin.js",
+            "symbol": "deleteUser",
+            "line": 61
+          }
+        }
+      ],
+      "baseline_state": "new"
+    },
+    {
+      "fingerprint": "71fb1a6aaf355e8c336845e2b679da7c8d3cc3a0dbe6e9ad32c1462425b35edb",
+      "rule_id": "weak-randomness",
+      "location": {
+        "file": "src/auth/token.js",
+        "symbol": "makeResetToken",
+        "line": 23
+      },
+      "insertion_point": null,
+      "severity": "Medium",
+      "confidence": "Tentative",
+      "status": "open",
+      "impact": "MEDIUM",
+      "likelihood": "MEDIUM",
+      "cvss": null,
+      "detection_method": "pattern",
+      "detail": "Password reset tokens are built from Math.random().",
+      "evidence": "return Math.random().toString(36).slice(2)",
+      "modules": [
+        "M4",
+        "M12"
+      ],
+      "sources": [
+        {
+          "tool": "fake",
+          "rule": "weak-randomness",
+          "reported_severity": "WARNING",
+          "detection_method": "pattern",
+          "location": {
+            "file": "src/auth/token.js",
+            "symbol": "makeResetToken",
+            "line": 23
+          }
+        }
+      ],
+      "baseline_state": "new"
+    }
+  ],
+  "coverage": [
+    {
+      "scanner": "fake",
+      "kind": "languages",
+      "detail": "javascript",
+      "count": 1,
+      "scanned": true
+    },
+    {
+      "scanner": "fake",
+      "kind": "files",
+      "detail": "scanned",
+      "count": 24,
+      "scanned": true
+    },
+    {
+      "scanner": "fake",
+      "kind": "rules",
+      "detail": "fake ruleset",
+      "count": 4,
+      "scanned": true
+    }
+  ],
+  "not_evaluable": [
+    {
+      "check": "module M2",
+      "reason": "no scanner in this run contributes to it",
+      "unblock": "add a scanner that covers this module"
+    },
+    {
+      "check": "module M7",
+      "reason": "no scanner in this run contributes to it",
+      "unblock": "add a scanner that covers this module"
+    },
+    {
+      "check": "module M8",
+      "reason": "no scanner in this run contributes to it",
+      "unblock": "add a scanner that covers this module"
+    },
+    {
+      "check": "module M9",
+      "reason": "no scanner in this run contributes to it",
+      "unblock": "add a scanner that covers this module"
+    },
+    {
+      "check": "module M10",
+      "reason": "no scanner in this run contributes to it",
+      "unblock": "add a scanner that covers this module"
+    },
+    {
+      "check": "module M11",
+      "reason": "no scanner in this run contributes to it",
+      "unblock": "add a scanner that covers this module"
+    },
+    {
+      "check": "module M13",
+      "reason": "no scanner in this run contributes to it",
+      "unblock": "add a scanner that covers this module"
+    }
+  ],
+  "summary": {
+    "by_severity_confidence": {
+      "Critical": {
+        "Certain": 0,
+        "Firm": 0,
+        "Tentative": 1
+      },
+      "High": {
+        "Certain": 0,
+        "Firm": 1,
+        "Tentative": 1
+      },
+      "Medium": {
+        "Certain": 0,
+        "Firm": 0,
+        "Tentative": 1
+      },
+      "Low": {
+        "Certain": 0,
+        "Firm": 0,
+        "Tentative": 0
+      },
+      "Info": {
+        "Certain": 0,
+        "Firm": 0,
+        "Tentative": 0
+      }
+    },
+    "suppressed": 0,
+    "new": 4,
+    "fixed": 0,
+    "unchanged": 0
+  }
+}

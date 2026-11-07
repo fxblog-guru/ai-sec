@@ -1,0 +1,4 @@
+{"ts":"2026-10-30T15:49:46.142Z","type":"scan_started","severity":"info","summary":"scan 20261030-224946-2487 at tier T0","data":{"slug":"demo","tier":"T0","modules":["M1","M2","M3","M4","M5","M6","M7","M8","M9","M10","M11","M12","M13"]}}
+{"ts":"2026-10-30T15:49:46.509Z","type":"scanner_finished","severity":"info","summary":"fake finished: 4 candidate findings","data":{"scanner":"fake","findings":4}}
+{"ts":"2026-10-30T15:49:46.523Z","type":"new_critical","severity":"error","summary":"new critical finding: hardcoded-credential","data":{"fingerprint":"edb4fc6efc84d030876896a1064f5298c57f36c2d3ae72ea0a3c7e9612eae5ee","rule_id":"hardcoded-credential"}}
+{"ts":"2026-10-30T15:49:46.574Z","type":"run_finished","severity":"info","summary":"run 20261030-224946-2487 finished: done","data":{"run_state":"done"}}

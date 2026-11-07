@@ -1,0 +1,14 @@
+{
+  "name": "ai-sec",
+  "version": "0.18.0",
+  "private": true,
+  "description": "AI-driven security assessment: deterministic gates, scanner-agnostic adapters, one merged finding set.",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "bin": { "sec": "bin/sec.mjs" },
+  "scripts": {
+    "test": "node --test --test-concurrency=2 \"tests/*.test.mjs\"",
+    "mutate": "node tests/mutate.mjs",
+    "bench:dynamic": "node benchmarks/dynamic/run.mjs"
+  }
+}

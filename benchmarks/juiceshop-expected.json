@@ -1,0 +1,244 @@
+{
+  "comment": "Known answers for OWASP Juice Shop. We did not write these down from reading the code and deciding what counts: Juice Shop annotates the exact line of each planted defect in its own source with `// vuln-code-snippet vuln-line <challengeName>`, and `benchmarks/juiceshop.mjs` extracts them. Twenty-seven annotated lines across nine files, grouped here into the sixteen defects they describe. Five of them we do not find, and they are counted in the denominator on purpose: a benchmark you can only pass by removing the questions measures nothing. Each miss names why, and a miss marked `judgement` is a decision not to over-claim rather than a bug to fix.",
+  "corpus": "OWASP/juice-shop",
+  "corpus_version": "20.3.0",
+  "authored_by": "the Juice Shop project, via its own vuln-code-snippet annotations",
+  "defects": [
+    {
+      "id": "unguarded-frontend-routes",
+      "file": "frontend/src/app/app.routing.ts",
+      "cwe": "CWE-862",
+      "owasp": "A01:2025",
+      "modules": ["M5", "M9"],
+      "min_severity": "Medium",
+      "detectable": "judgement",
+      "cause": "the administration, score-board, web3-sandbox and token-sale routes are registered with no guard, so the client will render them for anyone who types the path",
+      "not_the_cause": [
+        "the server is still expected to authorize the API calls those pages make",
+        "a route being absent from the navigation menu"
+      ],
+      "why_missed": "a frontend route without a guard is the normal case — most routes in most applications have none and should not. Which routes need one is a statement about the application, not a pattern in it, so a rule here would report every route in every repository.",
+      "source": "vuln-line adminSectionChallenge, scoreBoardChallenge, web3SandboxChallenge, tokenSaleChallenge"
+    },
+    {
+      "id": "xss-via-bypassed-sanitizer",
+      "file": "frontend/src/app/search-result/search-result.component.ts",
+      "rule_id_prefix": "bypass-framework-escaping",
+      "cwe": "CWE-79",
+      "owasp": "A05:2025",
+      "modules": ["M9", "M1"],
+      "min_severity": "High",
+      "detectable": "static",
+      "cause": "bypassSecurityTrustHtml is called on a product description from the API and on the search term from the URL, switching off the escaping that makes XSS rare in Angular",
+      "not_the_cause": [
+        "Angular being insecure by default",
+        "a missing Content-Security-Policy, which would reduce the impact and not the defect"
+      ],
+      "source": "vuln-line restfulXssChallenge, localXssChallenge, xssBonusChallenge"
+    },
+    {
+      "id": "redirect-allowlist-entries",
+      "file": "lib/insecurity.ts",
+      "cwe": "CWE-601",
+      "owasp": "A01:2025",
+      "modules": ["M1"],
+      "min_severity": "Low",
+      "detectable": "judgement",
+      "cause": "the redirect allowlist contains cryptocurrency addresses, so the redirector will happily send a user to one",
+      "not_the_cause": ["the allowlist mechanism itself, which is the right shape"],
+      "why_missed": "whether an entry belongs in an allowlist is a question about the business, not the code. No rule can read that list and know which URL is inappropriate.",
+      "source": "vuln-line redirectCryptoCurrencyChallenge"
+    },
+    {
+      "id": "redirect-allowlist-substring",
+      "file": "lib/insecurity.ts",
+      "rule_id_prefix": "allowlist-matched-by-substring",
+      "cwe": "CWE-697",
+      "owasp": "A01:2025",
+      "modules": ["M1", "M9", "M7"],
+      "min_severity": "Medium",
+      "detectable": "static",
+      "cause": "the allowlist is enforced with url.includes(allowedUrl), which passes for any URL that merely contains an allowed one anywhere in it",
+      "not_the_cause": [
+        "the allowlist being too short",
+        "the redirect endpoint existing at all"
+      ],
+      "source": "vuln-line redirectChallenge"
+    },
+    {
+      "id": "weak-password-hash",
+      "file": "models/user.ts",
+      "rule_id_prefix": "weak-password-hash-via-helper",
+      "cwe": "CWE-916",
+      "owasp": "A02:2025",
+      "modules": ["M4", "M12"],
+      "min_severity": "High",
+      "detectable": "static",
+      "cause": "the password setter stores security.hash(clearTextPassword), and that helper is crypto.createHash('md5') in lib/insecurity.ts — an unsalted fast digest rather than a key derivation function",
+      "not_the_cause": [
+        "passwords being stored at all",
+        "the absence of a password policy, which is a separate control",
+        "the setter itself, which names a helper and is the line that shows the defect rather than the line that causes it"
+      ],
+      "was_missed_until": "the cross-file check. This defect was recorded as out of reach — the weak primitive is in another module and no regular expression follows a function into another file — and it stayed a miss for one full measurement cycle, which is what put M12 at `failing`. `adapters/scanners/builtin/crossfile.mjs` resolves one hop, and the grade moved because the tool changed, not because the answer did.",
+      "source": "vuln-line weakPasswordChallenge"
+    },
+    {
+      "id": "tool-discount-bound-in-prose",
+      "file": "routes/chat.ts",
+      "rule_id_prefix": "tool-bound-stated-only-in-prose",
+      "cwe": "CWE-20",
+      "owasp": "A04:2025",
+      "owasp_llm": "LLM06:2025",
+      "modules": ["M14", "M5"],
+      "min_severity": "High",
+      "detectable": "static",
+      "cause": "the chatbot's coupon tool declares its discount argument as z.number().describe('... maximum 10') — the bound is in a sentence the model reads, not in the schema the server enforces — and the handler mints a coupon for whatever number comes back",
+      "not_the_cause": [
+        "the chatbot being able to issue coupons, which is the feature",
+        "the model being badly prompted: a better prompt is still an instruction, and instructions are what prompt injection overrides"
+      ],
+      "source": "vuln-line chatbotPromptInjectionChallenge, chatbotGreedyInjectionChallenge"
+    },
+    {
+      "id": "sql-injection-login",
+      "file": "routes/login.ts",
+      "rule_id_prefix": "sql-injection",
+      "cwe": "CWE-89",
+      "owasp": "A02:2025",
+      "modules": ["M1", "M6", "M8"],
+      "min_severity": "High",
+      "detectable": "static",
+      "cause": "the email and the password hash are interpolated into a raw SELECT, so a quote in the email changes the shape of the query and logs in as the first user",
+      "not_the_cause": ["weak password storage", "the absence of rate limiting"],
+      "source": "vuln-line loginAdminChallenge, loginBenderChallenge, loginJimChallenge"
+    },
+    {
+      "id": "sql-injection-search",
+      "file": "routes/search.ts",
+      "rule_id_prefix": "sql-injection",
+      "cwe": "CWE-89",
+      "owasp": "A02:2025",
+      "modules": ["M1", "M6", "M8"],
+      "min_severity": "High",
+      "detectable": "static",
+      "cause": "the search term is interpolated into a raw SELECT, which allows a UNION and with it the whole schema",
+      "not_the_cause": ["the 200-character truncation, which limits the payload and not the defect"],
+      "source": "vuln-line unionSqlInjectionChallenge, dbSchemaChallenge"
+    },
+    {
+      "id": "nosql-operator-in-review-filter",
+      "file": "routes/updateProductReviews.ts",
+      "rule_id_prefix": "nosql-operator-injection",
+      "cwe": "CWE-943",
+      "owasp": "A02:2025",
+      "modules": ["M6", "M8", "M1"],
+      "min_severity": "High",
+      "detectable": "static",
+      "cause": "the review id comes from the JSON body straight into the filter, so a body can send an operator object instead of a value and the update matches every review",
+      "not_the_cause": [
+        "the multi flag alone, which only decides how many of the matched rows change",
+        "SQL injection — this is a document store and the value is the query language"
+      ],
+      "source": "vuln-line noSqlReviewsChallenge"
+    },
+    {
+      "id": "review-update-ignores-owner",
+      "file": "routes/updateProductReviews.ts",
+      "cwe": "CWE-639",
+      "owasp": "A01:2025",
+      "modules": ["M5"],
+      "min_severity": "High",
+      "detectable": "static-blocked",
+      "cause": "the handler reads the authenticated user and then never uses it in the filter, so any signed-in account can edit any review",
+      "not_the_cause": ["the NoSQL operator issue on the same line, which is a different defect with a different fix"],
+      "why_missed": "`caller-identity-fetched-and-unused` was written for exactly this shape and correctly does not fire here. The handler binds `user` on line 16 and does use it again on line 24 — inside `challengeUtils.solveIf(...)`, Juice Shop's own challenge-tracking scaffolding. Deciding that a use inside solveIf is not an authorization use means knowing what solveIf is for, which is a statement about this application. The check fires where the variable is genuinely never read again, and this is not that; claiming it would mean tuning the rule to one corpus.",
+      "source": "vuln-line forgedReviewChallenge"
+    },
+    {
+      "id": "ftp-directory-listing",
+      "file": "server.ts",
+      "rule_id_prefix": "directory-listing-enabled",
+      "cwe": "CWE-548",
+      "owasp": "A05:2025",
+      "modules": ["M3", "M10", "M13"],
+      "min_severity": "Medium",
+      "detectable": "static",
+      "cause": "serveIndex makes /ftp and /support/logs browsable, which is how the backup and the access log are found",
+      "not_the_cause": ["the files being present on disk, which is expected"],
+      "source": "vuln-line directoryListingChallenge, accessLogDisclosureChallenge"
+    },
+    {
+      "id": "rate-limit-keyed-on-forwarded-for",
+      "file": "server.ts",
+      "rule_id_prefix": "rate-limit-keyed-on-client-header",
+      "cwe": "CWE-807",
+      "owasp": "A07:2025",
+      "modules": ["M4", "M7"],
+      "min_severity": "Medium",
+      "detectable": "static",
+      "cause": "the password-reset limiter counts per X-Forwarded-For, a header the client sets, so changing it resets the count",
+      "not_the_cause": ["the limit being too high"],
+      "source": "vuln-line resetPasswordMortyChallenge"
+    },
+    {
+      "id": "product-update-guard-commented-out",
+      "file": "server.ts",
+      "rule_id_prefix": "commented-out-authorization",
+      "cwe": "CWE-862",
+      "owasp": "A01:2025",
+      "modules": ["M5", "M7"],
+      "min_severity": "High",
+      "detectable": "static",
+      "cause": "the isAuthorized guard on PUT /api/Products/:id is commented out while the neighbouring POST and DELETE keep theirs",
+      "not_the_cause": ["a missing guard — the guard is written, and one character from being live"],
+      "source": "vuln-line changeProductChallenge"
+    },
+    {
+      "id": "register-as-admin",
+      "file": "server.ts",
+      "rule_id_prefix": "auto-crud-exposes-privileged-field",
+      "cwe": "CWE-915",
+      "cwe_originally_recorded": "CWE-269",
+      "owasp": "A01:2025",
+      "modules": ["M5", "M4", "M7"],
+      "min_severity": "High",
+      "detectable": "static",
+      "cause": "finale generates CRUD over UserModel with exclude: ['password', 'totpSecret'], and the model declares `role`. The generated POST /api/Users therefore accepts role, so a registration can ask for admin",
+      "not_the_cause": [
+        "the absence of email verification",
+        "the create hook on the line the annotation marks, which only creates a wallet"
+      ],
+      "was_missed_until": "the cross-file check. Recorded first as judgement — mass assignment is only a defect when an assignable field is privileged, and which one that is depends on the application. That is still true, and it turned out to be readable: the model declares the column and the resource lists its exclusions, so the gap between two lists is the defect. The CWE was re-recorded from CWE-269 to CWE-915, which is the more precise weakness; the original is kept above so the change is visible rather than quietly helpful.",
+      "source": "vuln-line registerAdminChallenge"
+    },
+    {
+      "id": "metrics-endpoint-public",
+      "file": "server.ts",
+      "rule_id_prefix": "exposed-operational-endpoint",
+      "cwe": "CWE-200",
+      "owasp": "A05:2025",
+      "modules": ["M3", "M7", "M13"],
+      "min_severity": "Medium",
+      "detectable": "static",
+      "cause": "/metrics is registered with no authorization, publishing counters that describe the application and its traffic",
+      "not_the_cause": ["Prometheus metrics being collected at all"],
+      "source": "vuln-line exposedMetricsChallenge"
+    }
+  ],
+  "accepted": [
+    "ssrf",
+    "path-traversal",
+    "unsafe-deserialization",
+    "open-redirect",
+    "weak-randomness",
+    "hardcoded-credential",
+    "redos-nested-quantifier",
+    "unpinned-base-image",
+    "missing-tenant-predicate",
+    "no-authorization-guard",
+    "unbounded-model-consumption",
+    "template-autoescape-disabled"
+  ],
+  "accepted_comment": "Real findings Juice Shop did not annotate. Its vuln-code-snippet markers cover the lines its challenges are built on, not every defect in the application — it is deliberately vulnerable throughout. Each rule listed here was checked against the source by hand before being accepted; they are not counted as planted, because we did not have a recorded answer for them before the scan."
+}

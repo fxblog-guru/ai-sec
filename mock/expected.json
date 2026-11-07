@@ -1,0 +1,220 @@
+{
+  "comment": "Known answers for the planted defects. tests/exam.test.mjs checks that a scan names the cause, not just that it produces output.",
+  "defects": [
+    {
+      "id": "sqli-orders",
+      "file": "app/db.js",
+      "symbol": "getOrder",
+      "cwe": "CWE-89",
+      "owasp": "A05:2025",
+      "modules": [
+        "M1",
+        "M6",
+        "M8"
+      ],
+      "min_severity": "High",
+      "cause": "req.body.orderId is concatenated into a raw SQL string",
+      "not_the_cause": [
+        "missing input validation alone",
+        "no WAF"
+      ]
+    },
+    {
+      "id": "tenant-predicate",
+      "file": "app/db.js",
+      "symbol": "findOrder",
+      "cwe": "CWE-639",
+      "owasp": "A01:2025",
+      "modules": [
+        "M5",
+        "M8"
+      ],
+      "min_severity": "High",
+      "cause": "the query is parameterized but carries no tenant predicate, so it crosses tenants",
+      "not_the_cause": [
+        "SQL injection"
+      ],
+      "teaches": "parameterization prevents injection; it says nothing about which rows come back"
+    },
+    {
+      "id": "authz-ordering",
+      "file": "app/routes.js",
+      "symbol": "delete /admin/users/:userId",
+      "cwe": "CWE-862",
+      "owasp": "A01:2025",
+      "modules": [
+        "M5"
+      ],
+      "min_severity": "High",
+      "cause": "the route is registered before router.use(requireAdmin), so the guard never runs for it",
+      "not_the_cause": [
+        "requireAdmin is missing",
+        "the role check is wrong"
+      ],
+      "teaches": "a guard that exists is not a guard that runs; registration order decides"
+    },
+    {
+      "id": "open-redirect",
+      "file": "app/routes.js",
+      "symbol": "get /go",
+      "cwe": "CWE-601",
+      "owasp": "A01:2025",
+      "modules": [
+        "M1"
+      ],
+      "min_severity": "Medium",
+      "cause": "res.redirect takes req.query.next with no allowlist"
+    },
+    {
+      "id": "weak-random-token",
+      "file": "app/auth.js",
+      "symbol": "makeResetToken",
+      "cwe": "CWE-330",
+      "owasp": "A04:2025",
+      "modules": [
+        "M4",
+        "M12"
+      ],
+      "min_severity": "Medium",
+      "cause": "Math.random is not cryptographically secure, so reset tokens are predictable"
+    },
+    {
+      "id": "md5-password",
+      "file": "app/auth.js",
+      "symbol": "hashPassword",
+      "cwe": "CWE-916",
+      "owasp": "A04:2025",
+      "modules": [
+        "M12"
+      ],
+      "min_severity": "High",
+      "cause": "passwords are hashed with MD5, unsalted; a KDF is required",
+      "not_the_cause": [
+        "MD5 is merely deprecated"
+      ]
+    },
+    {
+      "id": "path-traversal",
+      "file": "app/upload.js",
+      "symbol": "download",
+      "cwe": "CWE-22",
+      "owasp": "A01:2025",
+      "modules": [
+        "M1"
+      ],
+      "min_severity": "High",
+      "cause": "path.join does not prevent ../ escaping BASE; the result is never checked to still be inside it",
+      "teaches": "normalize and then verify containment, rather than trusting join"
+    },
+    {
+      "id": "ssrf-preview",
+      "file": "app/fetch.js",
+      "symbol": "fetchPreview",
+      "cwe": "CWE-918",
+      "owasp": "A01:2025",
+      "modules": [
+        "M1"
+      ],
+      "min_severity": "High",
+      "cause": "a user-supplied URL is fetched server-side with no allowlist and redirects followed",
+      "teaches": "SSRF folded into A01 in the 2025 edition; it is an access-control failure"
+    },
+    {
+      "id": "hardcoded-credentials",
+      "file": "config/settings.js",
+      "cwe": "CWE-798",
+      "owasp": "A02:2025",
+      "modules": [
+        "M3"
+      ],
+      "min_severity": "Critical",
+      "cause": "an AWS key id and a database password are committed to the repository",
+      "must_be_redacted": true
+    },
+    {
+      "id": "prompt-injection-ticket",
+      "file": "app/assistant.js",
+      "symbol": "summarizeTicket",
+      "cwe": "CWE-1427",
+      "owasp_llm": "LLM01:2025",
+      "modules": [
+        "M14",
+        "M6"
+      ],
+      "min_severity": "High",
+      "cause": "req.body.ticket is concatenated into the system prompt, so the ticket author decides what the assistant does",
+      "not_the_cause": [
+        "missing input sanitisation",
+        "the model being wrong"
+      ],
+      "teaches": "escaping does not stop prompt injection; role separation and least-privilege tools do"
+    },
+    {
+      "id": "llm-output-executed",
+      "file": "app/assistant.js",
+      "symbol": "runSuggestedFix",
+      "cwe": "CWE-94",
+      "owasp_llm": "LLM05:2025",
+      "modules": [
+        "M14",
+        "M1"
+      ],
+      "min_severity": "High",
+      "cause": "the completion is passed to execSync, so a completion the attacker steered becomes a command",
+      "not_the_cause": [
+        "trusting the model vendor",
+        "command injection from req.body alone"
+      ],
+      "teaches": "a completion is untrusted input, however much you trust who produced the model"
+    },
+    {
+      "id": "agent-shell-tool",
+      "file": "app/assistant.js",
+      "symbol": "handleTool",
+      "cwe": "CWE-250",
+      "owasp_llm": "LLM06:2025",
+      "modules": [
+        "M14",
+        "M5"
+      ],
+      "min_severity": "High",
+      "cause": "a tool the model may call runs a shell with arguments the model chose",
+      "not_the_cause": [
+        "the tool existing at all"
+      ]
+    },
+    {
+      "id": "key-in-prompt",
+      "file": "app/assistant.js",
+      "symbol": "callPartnerApi",
+      "cwe": "CWE-200",
+      "owasp_llm": "LLM02:2025",
+      "modules": [
+        "M14",
+        "M3"
+      ],
+      "min_severity": "High",
+      "cause": "a credential is interpolated into the prompt, so it can come back out in a completion, a log or a trace",
+      "not_the_cause": [
+        "the key being in an environment variable"
+      ]
+    },
+    {
+      "id": "no-token-ceiling",
+      "file": "app/assistant.js",
+      "symbol": "draftReply",
+      "cwe": "CWE-770",
+      "owasp_llm": "LLM10:2025",
+      "modules": [
+        "M14"
+      ],
+      "min_severity": "Low",
+      "finding_class": "hardening",
+      "cause": "the model call sets no max_tokens and no timeout",
+      "not_the_cause": [
+        "a vulnerability — nothing crosses a boundary"
+      ],
+      "teaches": "cost and availability are real and are not the same thing as a way in"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "schema": "sec-state/v1",
+  "run_id": "20261030-224946-2487",
+  "state": "done",
+  "history": [
+    {
+      "state": "preparing",
+      "at": "2026-10-30T15:49:46.134Z"
+    },
+    {
+      "state": "scanning",
+      "at": "2026-10-30T15:49:46.149Z"
+    },
+    {
+      "state": "merging",
+      "at": "2026-10-30T15:49:46.519Z"
+    },
+    {
+      "state": "done",
+      "at": "2026-10-30T15:49:46.523Z"
+    }
+  ],
+  "started_at": "2026-10-30T15:49:46.134Z",
+  "finished_at": "2026-10-30T15:49:46.523Z",
+  "reason": null
+}

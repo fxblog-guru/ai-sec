@@ -1,0 +1,30 @@
+{
+  "slug": "demo",
+  "target": "repo",
+  "target_path": "C:\\Users\\luann\\agentic-fx\\ai-sec\\examples\\quickstart",
+  "tier": "T0",
+  "modules": [
+    "M1",
+    "M2",
+    "M3",
+    "M4",
+    "M5",
+    "M6",
+    "M7",
+    "M8",
+    "M9",
+    "M10",
+    "M11",
+    "M12",
+    "M13"
+  ],
+  "accuracy": "balanced",
+  "depth": "normal",
+  "scanners": [
+    "fake"
+  ],
+  "scanner_options": {},
+  "timeout_s": 600,
+  "run_id": "20261030-224946-2487",
+  "root": "C:\\Users\\luann\\agentic-fx\\ai-sec\\examples\\quickstart"
+}

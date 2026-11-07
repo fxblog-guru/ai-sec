@@ -1,0 +1,159 @@
+{
+  "comment": "Known answers for OWASP NodeGoat. Every defect below is taken from NodeGoat's own tutorial pages (app/views/tutorial/a1..a10, ssrf) and then confirmed against the source line. We did not plant any of them and did not choose them to suit our rules, which is the point: the code is external, so a perfect score here means something a perfect score on mock/ cannot.",
+  "corpus": "OWASP/NodeGoat",
+  "authored_by": "ai-sec, from the target's own documentation",
+  "defects": [
+    {
+      "id": "ssjs-injection-contributions",
+      "file": "app/routes/contributions.js",
+      "cwe": "CWE-94",
+      "owasp": "A03:2025",
+      "modules": [
+        "M1",
+        "M6"
+      ],
+      "min_severity": "High",
+      "cause": "req.body values are passed to eval(), so a request executes JavaScript on the server",
+      "not_the_cause": [
+        "missing input validation alone",
+        "the absence of a WAF"
+      ],
+      "source": "tutorial a1 — 'routes/contributions.js ... makes application vulnerable to SSJS attack'"
+    },
+    {
+      "id": "ssrf-research",
+      "file": "app/routes/research.js",
+      "cwe": "CWE-918",
+      "owasp": "A03:2025",
+      "modules": [
+        "M1",
+        "M6"
+      ],
+      "min_severity": "High",
+      "cause": "needle.get() is called with a URL built from req.query.url, so the server fetches whatever the caller names",
+      "not_the_cause": [
+        "an open redirect — the server makes the request, not the browser"
+      ],
+      "source": "tutorial ssrf — 'routes/research.js'"
+    },
+    {
+      "id": "idor-allocations",
+      "file": "app/routes/allocations.js",
+      "cwe": "CWE-639",
+      "owasp": "A01:2025",
+      "modules": [
+        "M5",
+        "M8"
+      ],
+      "min_severity": "High",
+      "cause": "the user id is taken from the URL and used to fetch allocations with no check that it belongs to the caller",
+      "not_the_cause": [
+        "injection — the value is used as a parameter, not concatenated"
+      ],
+      "source": "tutorial a4 — 'routes/allocations.js, the insecure application takes user id from url'"
+    },
+    {
+      "id": "missing-function-level-authz",
+      "file": "app/routes/index.js",
+      "cwe": "CWE-862",
+      "owasp": "A01:2025",
+      "modules": [
+        "M5",
+        "M7"
+      ],
+      "min_severity": "High",
+      "cause": "the benefits routes carry isLoggedIn but no role check, so any authenticated non-admin user reaches an admin-only module by visiting the URL",
+      "not_the_cause": [
+        "missing authentication - isLoggedIn is present on these routes",
+        "the link being hidden in the UI for non-admins"
+      ],
+      "source": "tutorial a7 — 'there is no authorization check for benefits related routes in routes/index.js'",
+      "teaches": "authenticated is not authorized; a guard that answers who you are does not answer what you may do",
+      "issue_type": "missing-authz"
+    },
+    {
+      "id": "stored-xss-profile",
+      "file": "server.js",
+      "cwe": "CWE-79",
+      "owasp": "A03:2025",
+      "modules": [
+        "M9",
+        "M6"
+      ],
+      "min_severity": "High",
+      "cause": "the template engine is configured with autoescape:false, so every value rendered anywhere in the application is rendered as markup",
+      "not_the_cause": [
+        "the profile handler failing to escape - it does call an encoder",
+        "reflected XSS - the payload is persisted first"
+      ],
+      "source": "tutorial a3 - In server.js, enable the HTML Encoding using template engine auto escape flag",
+      "teaches": "one line of configuration can be the cause of a vulnerability in every view; reviewing handlers one at a time never finds it"
+    },
+    {
+      "id": "open-redirect-index",
+      "file": "app/routes/index.js",
+      "cwe": "CWE-601",
+      "owasp": "A01:2025",
+      "modules": [
+        "M1"
+      ],
+      "min_severity": "Medium",
+      "cause": "a redirect target is taken from the request without an allowlist",
+      "not_the_cause": [
+        "SSRF — the browser follows it, the server does not"
+      ],
+      "source": "tutorial a10 — 'routes/index.js'"
+    },
+    {
+      "id": "sensitive-data-plaintext",
+      "file": "app/data/profile-dao.js",
+      "cwe": "CWE-311",
+      "owasp": "A02:2025",
+      "modules": [
+        "M12",
+        "M8"
+      ],
+      "min_severity": "Medium",
+      "cause": "SSN and date of birth are written to the database in cleartext; the file's own comment says they should be encrypted",
+      "not_the_cause": [
+        "weak transport — this is data at rest"
+      ],
+      "source": "tutorial a6 — 'data/profile-dao.js'"
+    },
+    {
+      "id": "vulnerable-dependencies",
+      "file": "package-lock.json",
+      "cwe": "CWE-1104",
+      "owasp": "A02:2025",
+      "modules": [
+        "M2",
+        "M10"
+      ],
+      "min_severity": "High",
+      "cause": "the lockfile pins versions with published advisories",
+      "not_the_cause": [
+        "any single package — the finding is the set"
+      ],
+      "source": "tutorial a9",
+      "rule_id_prefix": "cve:",
+      "cwe_note": "trivy files each CVE under that CVE own weakness, so a single CWE cannot key this class"
+    },
+    {
+      "id": "redos-bank-routing",
+      "file": "app/routes/profile.js",
+      "cwe": "CWE-1333",
+      "owasp": "A04:2025",
+      "modules": [
+        "M6"
+      ],
+      "min_severity": "Medium",
+      "cause": "the bank routing number is validated with /([0-9]+)+#/, a quantified group that is itself quantified",
+      "not_the_cause": [
+        "missing input validation - validation is present and is itself the defect"
+      ],
+      "teaches": "a control can be the vulnerability",
+      "source": "tutorial redos - the regexPattern is insecure and vulnerable to catastrophic backtracking"
+    }
+  ],
+  "accepted": []
+}
